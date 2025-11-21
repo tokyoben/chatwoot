@@ -367,12 +367,24 @@ class Message < ApplicationRecord
 
   # MITM Interceptor: Send message to external interceptor service
   def send_to_interceptor
-    return if being_replaced? # Prevent loops during content replacement
+    Rails.logger.info("Message#send_to_interceptor called for message #{id}")
+
+    if being_replaced?
+      Rails.logger.info("Message#send_to_interceptor: Skipping message #{id} (being_replaced=true)")
+      return
+    end
 
     interceptor = MessageInterceptorService.new(self)
-    interceptor.send_to_interceptor if interceptor.should_intercept?
+
+    if interceptor.should_intercept?
+      Rails.logger.info("Message#send_to_interceptor: Calling service for message #{id}")
+      interceptor.send_to_interceptor
+    else
+      Rails.logger.info("Message#send_to_interceptor: Skipping message #{id} (should_intercept=false)")
+    end
   rescue StandardError => e
-    Rails.logger.error("Message#send_to_interceptor failed: #{e.message}")
+    Rails.logger.error("Message#send_to_interceptor failed for message #{id}: #{e.message}")
+    Rails.logger.error(e.backtrace.join("\n"))
     # Don't raise - we don't want to break message creation if interceptor fails
   end
 

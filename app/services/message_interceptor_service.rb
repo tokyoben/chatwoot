@@ -40,7 +40,24 @@ class MessageInterceptorService
   # Send message to external interceptor service
   # This happens AFTER the message is saved to DB
   def send_to_interceptor
-    return unless should_intercept?
+    Rails.logger.info(
+      "MessageInterceptor: Checking message #{message.id} " \
+      "(type: #{message.message_type}, content: '#{message.content&.truncate(50)}')"
+    )
+
+    unless should_intercept?
+      Rails.logger.info(
+        "MessageInterceptor: Skipping message #{message.id} " \
+        "(should_intercept=false, activity=#{message.activity?}, " \
+        "private=#{message.private?}, being_replaced=#{message.being_replaced?})"
+      )
+      return
+    end
+
+    Rails.logger.info(
+      "MessageInterceptor: Intercepting message #{message.id}, " \
+      "will send to #{INTERCEPTOR_BACKEND_URL}"
+    )
 
     # Mark message as pending interception
     mark_as_pending_interception

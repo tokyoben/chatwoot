@@ -31,8 +31,17 @@ class MessageInterceptorJob < ApplicationJob
     url = MessageInterceptorService::INTERCEPTOR_BACKEND_URL
     timeout = MessageInterceptorService::INTERCEPTOR_TIMEOUT
 
+    Rails.logger.info(
+      "MessageInterceptorJob: Sending message #{message.id} to #{url} " \
+      "(timeout: #{timeout}s)"
+    )
+
     # Prepare payload
     payload = build_payload(message)
+
+    Rails.logger.debug(
+      "MessageInterceptorJob: Payload for message #{message.id}: #{payload.to_json}"
+    )
 
     # Send HTTP POST to external service
     response = HTTParty.post(
