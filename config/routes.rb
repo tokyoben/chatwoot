@@ -296,6 +296,17 @@ Rails.application.routes.draw do
           end
         end
       end
+
+      # ----------------------------------------------------------------------
+      # Internal API routes for message interceptor callbacks
+      # These routes are protected by API key authentication
+      namespace :internal do
+        resources :messages, only: [] do
+          member do
+            post :interceptor_callback
+          end
+        end
+      end
     end
 
     namespace :v2 do
@@ -319,17 +330,6 @@ Rails.application.routes.draw do
               get :conversation_traffic
               get :bot_metrics
             end
-          end
-        end
-      end
-
-      # ----------------------------------------------------------------------
-      # Internal API routes for message interceptor callbacks
-      # These routes are protected by API key authentication
-      namespace :internal do
-        resources :messages, only: [] do
-          member do
-            post :interceptor_callback
           end
         end
       end
