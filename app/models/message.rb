@@ -359,12 +359,6 @@ class Message < ApplicationRecord
     ::MessageTemplates::HookExecutionService.new(message: self).perform
   end
 
-  # MITM Interceptor: Check if message is currently being replaced
-  # This prevents infinite loops when updating message content
-  def being_replaced?
-    @being_replaced == true
-  end
-
   # MITM Interceptor: Send message to external interceptor service
   def send_to_interceptor
     Rails.logger.info("Message#send_to_interceptor called for message #{id}")
@@ -386,6 +380,12 @@ class Message < ApplicationRecord
     Rails.logger.error("Message#send_to_interceptor failed for message #{id}: #{e.message}")
     Rails.logger.error(e.backtrace.join("\n"))
     # Don't raise - we don't want to break message creation if interceptor fails
+  end
+
+  # MITM Interceptor: Check if message is currently being replaced
+  # This prevents infinite loops when updating message content
+  def being_replaced?
+    @being_replaced == true
   end
 
   def email_notifiable_webwidget?
