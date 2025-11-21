@@ -37,6 +37,9 @@ class WebhookListener < BaseListener
     inbox = message.inbox
 
     return unless message.webhook_sendable?
+    # MITM Interceptor: Skip webhook if message is being replaced by interceptor
+    # This prevents webhook loops when content is replaced
+    return if message.being_replaced?
 
     payload = message.webhook_data.merge(event: __method__.to_s)
     deliver_webhook_payloads(payload, inbox)

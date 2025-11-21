@@ -274,6 +274,10 @@ class Message < ApplicationRecord
     send_reply
     execute_message_template_hooks
     update_contact_activity
+    # MITM Interceptor: Send message to external service for translation/processing
+    # This happens AFTER webhooks are dispatched (dispatch_create_events)
+    # so webhooks receive original content, not translated content
+    send_to_interceptor
   end
 
   def update_contact_activity
@@ -353,6 +357,23 @@ class Message < ApplicationRecord
 
   def execute_message_template_hooks
     ::MessageTemplates::HookExecutionService.new(message: self).perform
+  end
+
+  # MITM Interceptor: Check if message is currently being replaced
+  # This prevents infinite loops when updating message content
+  def being_replaced?
+    @being_replaced == true
+  end
+
+  # MITM Interceptor: Send message to external interceptor service
+  def send_to_interceptor
+    return if being_replaced? # Prevent loops during content replacement
+
+    interceptor = MessageInterceptorService.new(self)
+    interceptor.send_to_interceptor if interceptor.should_intercept?
+  rescue StandardError => e
+    Rails.logger.error("Message#send_to_interceptor failed: #{e.message}")
+    # Don't raise - we don't want to break message creation if interceptor fails
   end
 
   def email_notifiable_webwidget?
