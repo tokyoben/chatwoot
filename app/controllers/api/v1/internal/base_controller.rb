@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-class Api::V1::Internal::BaseController < ApplicationController
-  # Note: verify_authenticity_token is already skipped in ApplicationController
-  skip_before_action :set_current_user
-  skip_before_action :handle_with_exception
+class Api::V1::Internal::BaseController < ActionController::API
+  # Use ActionController::API as base to avoid all the web-related callbacks
+  # This gives us a clean slate for internal API endpoints
 
   before_action :authenticate_interceptor_request
 
