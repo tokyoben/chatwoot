@@ -1,0 +1,54 @@
+Based on my analysis of the Chatwoot build configuration, here's what I found:
+
+  Build Environment Configuration
+
+  Runtime Versions:
+  - Node.js: 20.5.1 (.nvmrc) / 20.x (package.json:155)
+  - Yarn: 1.22.x (package.json:157)
+  - Ruby: 3.2.2 (.ruby-version:1, Gemfile:3)
+  - Rails: ~7.0.8.1
+
+  Build Stack:
+  - Bundler: Rails Webpacker 5.4.4 (package.json:41)
+  - Webpack: 4.46.0 (package.json:102) - EOL version
+  - Frontend: Vue 2.7.0 (package.json:82) - EOL since Dec 2023
+  - Babel: 7.13.x with manual plugin configuration
+
+  Issues Identified
+
+  1. Legacy OpenSSL Workaround
+    - Uses NODE_OPTIONS=--openssl-legacy-provider (Procfile.dev:2, docker-compose.yaml:81,
+  docker/Dockerfile:16)
+    - This is a workaround for Webpack 4 incompatibility with OpenSSL 3.0
+    - Indicates technical debt blocking upgrades
+  2. Webpack 4 Lock-in
+    - Webpack 4 reached EOL and doesn't support Node 17+
+    - Locked to Node 20.x specifically due to Webpack 4 limitations
+    - Using deprecated webpack-dev-server v3 (package.json:152)
+  3. Rails Webpacker Deprecation
+    - @rails/webpacker is in maintenance mode
+    - Rails 7+ recommends jsbundling-rails or cssbundling-rails
+  4. Mixed Build Complexity
+    - Procfile.dev:2 shows manual NODE_OPTIONS configuration
+    - Multiple Dockerfiles for different services (rails, webpack)
+    - Separate webpack dev server on port 3035
+
+  Recommendations
+
+  Short-term (Quick wins):
+  1. Document exact version requirements in README
+  2. Add .yarnrc to enforce Yarn 1.22.x
+  3. Consider Docker-based development to ensure consistency
+
+  Medium-term (Modernization):
+  1. Migrate to Webpack 5 - removes need for openssl-legacy-provider flag
+  2. Update to Yarn 3+ or pnpm - better performance and modern features
+  3. Migrate from Webpacker to jsbundling-rails + esbuild/vite
+
+  Long-term (Major upgrades):
+  1. Vue 3 migration - Vue 2 is EOL
+  2. Consider Vite - 10-100x faster than Webpack for dev
+  3. Consolidate build tools - reduce complexity
+
+  The core issue is being stuck on Webpack 4, which cascades into requiring the OpenSSL workaround and
+   preventing Node.js upgrades. Modernizing the build pipeline would resolve most of these issues.

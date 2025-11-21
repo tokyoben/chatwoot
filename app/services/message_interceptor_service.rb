@@ -57,25 +57,30 @@ class MessageInterceptorService
     # Set flag to prevent loops
     message.instance_variable_set(:@being_replaced, true)
 
-    # Update content WITHOUT triggering callbacks or validations
+    # Prepare metadata
+    current_attrs = message.additional_attributes || {}
+    updated_attrs = current_attrs.merge(
+      intercepted: true,
+      intercepted_at: Time.current
+    )
+    updated_attrs.merge!(metadata.symbolize_keys) if metadata.present?
+
+    # Update content AND metadata in a single update_columns call
     # This prevents webhook loops and additional after_save hooks
-    message.update_columns(
+    update_params = {
       content: new_content,
       processed_message_content: process_content(new_content),
+      additional_attributes: updated_attrs,
       updated_at: Time.current
-    )
+    }
 
-    # Update additional metadata if provided
-    if metadata.present?
-      current_attrs = message.additional_attributes || {}
-      message.update_columns(
-        additional_attributes: current_attrs.merge(
-          intercepted: true,
-          intercepted_at: Time.current,
-          **metadata.symbolize_keys
-        )
-      )
-    end
+    message.update_columns(update_params)
+
+    # Manually update the in-memory object to reflect the changes
+    # (instead of reloading which would lose the @being_replaced flag)
+    message.content = new_content
+    message.processed_message_content = process_content(new_content)
+    message.additional_attributes = updated_attrs
 
     # Manually broadcast the updated content to all listeners
     broadcast_updated_message
@@ -117,8 +122,8 @@ class MessageInterceptorService
   end
 
   def broadcast_updated_message
-    # Reload to get updated attributes
-    message.reload
+    # Don't reload - the message object is already updated in memory
+    # Reloading would create a new instance and lose the @being_replaced flag
 
     # Broadcast to ActionCable (same as when message is created)
     tokens = user_tokens + contact_tokens
