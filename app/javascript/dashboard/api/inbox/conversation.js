@@ -60,6 +60,12 @@ class ConversationApi extends ApiClient {
     });
   }
 
+  toggleAutomaticMode({ conversationId, enabled }) {
+    return axios.post(`${this.url}/${conversationId}/toggle_automatic_mode`, {
+      enabled,
+    });
+  }
+
   assignAgent({ conversationId, agentId }) {
     return axios.post(
       `${this.url}/${conversationId}/assignments?assignee_id=${agentId}`,

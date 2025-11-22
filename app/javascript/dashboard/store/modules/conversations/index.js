@@ -99,6 +99,14 @@ export const mutations = {
     Vue.set(chat, 'priority', priority);
   },
 
+  [types.UPDATE_CONVERSATION_ADDITIONAL_ATTRIBUTES](_state, { conversationId, attributes }) {
+    const [chat] = _state.allConversations.filter(c => c.id === conversationId);
+    if (chat) {
+      const currentAttrs = chat.additional_attributes || {};
+      Vue.set(chat, 'additional_attributes', { ...currentAttrs, ...attributes });
+    }
+  },
+
   [types.UPDATE_CONVERSATION_CUSTOM_ATTRIBUTES](_state, custom_attributes) {
     const [chat] = getSelectedChatConversation(_state);
     Vue.set(chat, 'custom_attributes', custom_attributes);

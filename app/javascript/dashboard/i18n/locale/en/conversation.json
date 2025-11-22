@@ -330,5 +330,11 @@
     "ORIGINAL_CONTENT": "Original Content",
     "TRANSLATED_CONTENT": "Translated Content",
     "NO_TRANSLATIONS_AVAILABLE": "No translations are available for this content"
+  },
+  "AUTOMATIC_MODE": {
+    "ENABLED": "Automatic mode enabled - AI will respond to incoming messages",
+    "DISABLED": "Automatic mode disabled - Manual responses only",
+    "TOGGLE_FAILED": "Failed to toggle automatic mode",
+    "NO_ASSIGNEE": "Please assign an agent before enabling automatic mode"
   }
 }

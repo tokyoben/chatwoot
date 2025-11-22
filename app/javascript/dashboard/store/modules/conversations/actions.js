@@ -466,6 +466,23 @@ const actions = {
     commit(types.ASSIGN_PRIORITY, { priority, conversationId });
   },
 
+  async toggleAutomaticMode({ commit }, { conversationId, enabled }) {
+    try {
+      await ConversationApi.toggleAutomaticMode({
+        conversationId,
+        enabled,
+      });
+
+      // Update conversation additional_attributes in store
+      commit(types.UPDATE_CONVERSATION_ADDITIONAL_ATTRIBUTES, {
+        conversationId,
+        attributes: { automatic_mode: enabled },
+      });
+    } catch (error) {
+      throw error;
+    }
+  },
+
   ...messageReadActions,
   ...messageTranslateActions,
 };

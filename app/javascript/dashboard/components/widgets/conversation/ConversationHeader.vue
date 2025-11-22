@@ -71,6 +71,10 @@
         :class="{ 'justify-end': isContactPanelOpen }"
       >
         <SLA-card-label v-if="hasSlaPolicyId" :chat="chat" show-extended-info />
+        <automatic-mode-toggle
+          v-if="currentChat.id"
+          :conversation-id="currentChat.id"
+        />
         <more-actions :conversation-id="currentChat.id" />
       </div>
     </div>
@@ -86,6 +90,7 @@ import InboxName from '../InboxName.vue';
 import MoreActions from './MoreActions.vue';
 import Thumbnail from '../Thumbnail.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
+import AutomaticModeToggle from '../../AutomaticModeToggle.vue';
 import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
@@ -97,6 +102,7 @@ export default {
     MoreActions,
     Thumbnail,
     SLACardLabel,
+    AutomaticModeToggle,
   },
   mixins: [inboxMixin, agentMixin, keyboardEventListenerMixins],
   props: {
