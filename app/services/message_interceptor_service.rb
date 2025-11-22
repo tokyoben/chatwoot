@@ -15,6 +15,8 @@
 # 6. Original webhooks fire with original content (before replacement)
 
 class MessageInterceptorService
+  include Events::Types
+
   attr_reader :message
 
   # Your external translation service URL
@@ -99,8 +101,9 @@ class MessageInterceptorService
     message.processed_message_content = process_content(new_content)
     message.additional_attributes = updated_attrs
 
-    # Manually broadcast the updated content to all listeners
-    broadcast_updated_message
+    # NOW dispatch the create events with the translated content
+    # This is the FIRST time clients will see this message
+    dispatch_create_events_with_translated_content
 
     # Clear flag
     message.instance_variable_set(:@being_replaced, false)
@@ -138,34 +141,45 @@ class MessageInterceptorService
     content.strip
   end
 
-  def broadcast_updated_message
-    # Don't reload - the message object is already updated in memory
-    # Reloading would create a new instance and lose the @being_replaced flag
+  def dispatch_create_events_with_translated_content
+    # Dispatch MESSAGE_CREATED event with the translated content
+    # This is the same as Message#dispatch_create_events but called after translation
+    Rails.configuration.dispatcher.dispatch(
+      MESSAGE_CREATED,
+      Time.zone.now,
+      message: message,
+      performed_by: Current.executed_by
+    )
 
-    # Broadcast to ActionCable (same as when message is created)
-    tokens = user_tokens + contact_tokens
+    # Handle first reply logic (same as original)
+    if message.valid_first_reply?
+      Rails.configuration.dispatcher.dispatch(
+        FIRST_REPLY_CREATED,
+        Time.zone.now,
+        message: message,
+        performed_by: Current.executed_by
+      )
+      message.conversation.update(first_reply_created_at: message.created_at, waiting_since: nil)
+    else
+      update_waiting_since
+    end
 
-    return if tokens.blank?
-
-    payload = message.push_event_data.merge(account_id: message.account_id)
-
-    # Broadcast as MESSAGE_UPDATED event
-    ActionCableBroadcastJob.perform_later(tokens.uniq, 'message.updated', payload)
+    Rails.logger.info(
+      "MessageInterceptor: Dispatched MESSAGE_CREATED for message #{message.id} with translated content"
+    )
   end
 
-  def user_tokens
-    # Get tokens for all agents/members who should receive this update
-    members = message.conversation.inbox.members
-    account = message.account
-
-    members.map { |member| "user_#{account.id}_#{member.id}" }
-  end
-
-  def contact_tokens
-    # Get tokens for the contact (user in widget)
-    contact_inbox = message.conversation.contact_inbox
-    return [] unless contact_inbox&.pubsub_token
-
-    ["contact_#{contact_inbox.pubsub_token}"]
+  def update_waiting_since
+    # Same logic as Message#update_waiting_since
+    if message.outgoing? && !message.private && message.conversation.waiting_since.present?
+      Rails.configuration.dispatcher.dispatch(
+        REPLY_CREATED,
+        Time.zone.now,
+        waiting_since: message.conversation.waiting_since,
+        message: message
+      )
+      message.conversation.update(waiting_since: nil)
+    end
+    message.conversation.update(waiting_since: message.created_at) if message.incoming? && message.conversation.waiting_since.blank?
   end
 end

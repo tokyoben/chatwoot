@@ -233,6 +233,18 @@ class Message < ApplicationRecord
     @being_replaced == true
   end
 
+  # MITM Interceptor: Check if this message should be intercepted
+  # Returns true if we should skip the initial broadcast and wait for translation
+  def should_intercept_message?
+    return false if content.blank?
+    return false if activity?
+    return false if private?
+    return false if being_replaced?
+
+    # Only intercept incoming and outgoing messages
+    incoming? || outgoing?
+  end
+
   private
 
   def prevent_message_flooding
@@ -276,14 +288,19 @@ class Message < ApplicationRecord
     reopen_conversation
     notify_via_mail
     set_conversation_activity
-    dispatch_create_events
+
+    # MITM Interceptor: Check if we should intercept this message
+    # If yes, skip dispatch_create_events and let the interceptor dispatch after translation
+    should_intercept = should_intercept_message?
+
+    dispatch_create_events unless should_intercept
     send_reply
     execute_message_template_hooks
     update_contact_activity
+
     # MITM Interceptor: Send message to external service for translation/processing
-    # This happens AFTER webhooks are dispatched (dispatch_create_events)
-    # so webhooks receive original content, not translated content
-    send_to_interceptor
+    # If intercepting, events will be dispatched after translation completes
+    send_to_interceptor if should_intercept
   end
 
   def update_contact_activity
