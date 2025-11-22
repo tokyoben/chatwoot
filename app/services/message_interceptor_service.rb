@@ -85,7 +85,8 @@ class MessageInterceptorService
       intercepted: true,
       intercepted_at: Time.current,
       translated_content: new_content,  # Store translation here
-      original_content: message.content  # Store original for reference
+      original_content: message.content,  # Store original for reference
+      pending_interception: false  # Clear pending flag
     )
     updated_attrs.merge!(metadata.symbolize_keys) if metadata.present?
 

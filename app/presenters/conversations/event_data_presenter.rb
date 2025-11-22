@@ -24,7 +24,13 @@ class Conversations::EventDataPresenter < SimpleDelegator
   private
 
   def push_messages
-    [messages.chat.last&.push_event_data].compact
+    # TRANSLATION: Don't include messages that are pending translation
+    # This prevents untranslated messages from appearing in conversation events
+    last_message = messages.chat.last
+    return [] if last_message.blank?
+    return [] if last_message.additional_attributes&.dig('pending_interception')
+
+    [last_message.push_event_data].compact
   end
 
   def push_meta
