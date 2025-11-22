@@ -86,10 +86,13 @@ export default {
       this.$emit('close');
     },
     getMessageContent(message) {
-      const { attachments, content } = message;
+      const { attachments, content, additional_attributes } = message;
       const hasAttachments = attachments && attachments.length;
 
-      if (content) return content;
+      // TRANSLATION: Widget users should see translated content from agents
+      const displayContent = additional_attributes?.translated_content || content;
+
+      if (displayContent) return displayContent;
 
       if (hasAttachments) return `📑`;
 
