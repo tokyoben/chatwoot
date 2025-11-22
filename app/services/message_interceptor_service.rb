@@ -72,19 +72,18 @@ class MessageInterceptorService
   # Stores BOTH original and translated content - frontend chooses which to display
   def replace_content(new_content, metadata = {})
     return if new_content.blank?
-    return if message.content == new_content # No change needed
 
     # Set flag to prevent loops
     message.instance_variable_set(:@being_replaced, true)
 
     # Store BOTH versions:
     # - content: sender's original (never changes)
-    # - translated_content: recipient's version
+    # - translated_content: recipient's version (may be same as original)
     current_attrs = message.additional_attributes || {}
     updated_attrs = current_attrs.merge(
       intercepted: true,
       intercepted_at: Time.current,
-      translated_content: new_content,  # Store translation here
+      translated_content: new_content,  # Store translation here (may equal original)
       original_content: message.content,  # Store original for reference
       pending_interception: false  # Clear pending flag
     )
@@ -104,15 +103,23 @@ class MessageInterceptorService
 
     # NOW dispatch the create events
     # Message contains BOTH versions - frontend decides which to show
+    # This happens even if content unchanged (e.g., emoji-only messages)
     dispatch_create_events_with_translated_content
 
     # Clear flag
     message.instance_variable_set(:@being_replaced, false)
 
-    Rails.logger.info(
-      "MessageInterceptor: Stored translation for message #{message.id} " \
-      "(original: '#{message.content}', translated: '#{new_content}')"
-    )
+    if message.content == new_content
+      Rails.logger.info(
+        "MessageInterceptor: No translation needed for message #{message.id} " \
+        "(content: '#{message.content}')"
+      )
+    else
+      Rails.logger.info(
+        "MessageInterceptor: Stored translation for message #{message.id} " \
+        "(original: '#{message.content}', translated: '#{new_content}')"
+      )
+    end
 
     true
   rescue StandardError => e
