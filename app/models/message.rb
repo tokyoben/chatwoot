@@ -293,6 +293,8 @@ class Message < ApplicationRecord
     # If yes, skip dispatch_create_events and let the interceptor dispatch after translation
     should_intercept = should_intercept_message?
 
+    Rails.logger.info("Message #{id}: should_intercept=#{should_intercept}, type=#{message_type}, content='#{content&.truncate(30)}'")
+
     dispatch_create_events unless should_intercept
     send_reply
     execute_message_template_hooks
