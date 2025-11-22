@@ -125,6 +125,14 @@ export default {
     displayContent() {
       // TRANSLATION: Widget users should see translated content from agents
       // Agent messages have translated_content in additional_attributes
+
+      // DEBUG: Log to see what we're receiving
+      console.log('Widget AgentMessage:', {
+        id: this.message.id,
+        content: this.message.content,
+        translated: this.message.additional_attributes?.translated_content
+      });
+
       return this.message.additional_attributes?.translated_content || this.message.content;
     },
     shouldDisplayAgentMessage() {

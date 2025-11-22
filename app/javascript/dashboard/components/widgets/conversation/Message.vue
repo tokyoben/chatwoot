@@ -289,6 +289,15 @@ export default {
       // TRANSLATION: Choose which content version to display
       // - If incoming (user sent it): show translated_content for agent
       // - If outgoing (agent sent it): show original content
+
+      // DEBUG: Log to see what we're receiving
+      console.log('Message data:', {
+        id: this.data.id,
+        content: this.data.content,
+        translated: this.data.additional_attributes?.translated_content,
+        isIncoming: this.isIncoming
+      });
+
       const contentToDisplay = this.isIncoming && this.data.additional_attributes?.translated_content
         ? this.data.additional_attributes.translated_content
         : this.data.content;
