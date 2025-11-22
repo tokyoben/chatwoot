@@ -26,7 +26,7 @@
               :message-content-attributes="messageContentAttributes"
               :message-id="message.id"
               :message-type="messageType"
-              :message="message.content"
+              :message="displayContent"
             />
             <div
               v-if="hasAttachments"
@@ -122,15 +122,20 @@ export default {
     };
   },
   computed: {
+    displayContent() {
+      // TRANSLATION: Widget users should see translated content from agents
+      // Agent messages have translated_content in additional_attributes
+      return this.message.additional_attributes?.translated_content || this.message.content;
+    },
     shouldDisplayAgentMessage() {
       if (
         this.contentType === 'input_select' &&
         this.messageContentAttributes.submitted_values &&
-        !this.message.content
+        !this.displayContent
       ) {
         return false;
       }
-      return this.message.content;
+      return this.displayContent;
     },
     readableTime() {
       const { created_at: createdAt = '' } = this.message;

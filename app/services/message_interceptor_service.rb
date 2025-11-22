@@ -69,6 +69,7 @@ class MessageInterceptorService
   end
 
   # Called by external service via callback endpoint
+  # Stores BOTH original and translated content - frontend chooses which to display
   def replace_content(new_content, metadata = {})
     return if new_content.blank?
     return if message.content == new_content # No change needed
@@ -76,46 +77,45 @@ class MessageInterceptorService
     # Set flag to prevent loops
     message.instance_variable_set(:@being_replaced, true)
 
-    # Prepare metadata
+    # Store BOTH versions:
+    # - content: sender's original (never changes)
+    # - translated_content: recipient's version
     current_attrs = message.additional_attributes || {}
     updated_attrs = current_attrs.merge(
       intercepted: true,
-      intercepted_at: Time.current
+      intercepted_at: Time.current,
+      translated_content: new_content,  # Store translation here
+      original_content: message.content  # Store original for reference
     )
     updated_attrs.merge!(metadata.symbolize_keys) if metadata.present?
 
-    # Update content AND metadata in a single update_columns call
-    # This prevents webhook loops and additional after_save hooks
+    # Update ONLY metadata, NOT content
+    # This keeps the sender's original in message.content
     update_params = {
-      content: new_content,
-      processed_message_content: process_content(new_content),
       additional_attributes: updated_attrs,
       updated_at: Time.current
     }
 
     message.update_columns(update_params)
 
-    # Manually update the in-memory object to reflect the changes
-    # (instead of reloading which would lose the @being_replaced flag)
-    message.content = new_content
-    message.processed_message_content = process_content(new_content)
+    # Update in-memory object
     message.additional_attributes = updated_attrs
 
-    # NOW dispatch the create events with the translated content
-    # This is the FIRST time clients will see this message
+    # NOW dispatch the create events
+    # Message contains BOTH versions - frontend decides which to show
     dispatch_create_events_with_translated_content
 
     # Clear flag
     message.instance_variable_set(:@being_replaced, false)
 
     Rails.logger.info(
-      "MessageInterceptor: Replaced content for message #{message.id} " \
-      "(conversation: #{message.conversation_id})"
+      "MessageInterceptor: Stored translation for message #{message.id} " \
+      "(original: '#{message.content}', translated: '#{new_content}')"
     )
 
     true
   rescue StandardError => e
-    Rails.logger.error("MessageInterceptor: Failed to replace content: #{e.message}")
+    Rails.logger.error("MessageInterceptor: Failed to store translation: #{e.message}")
     Rails.logger.error(e.backtrace.join("\n"))
     false
   end

@@ -286,9 +286,16 @@ export default {
         return this.$t('CONVERSATION.CSAT_REPLY_MESSAGE') + botMessageContent;
       }
 
+      // TRANSLATION: Choose which content version to display
+      // - If incoming (user sent it): show translated_content for agent
+      // - If outgoing (agent sent it): show original content
+      const contentToDisplay = this.isIncoming && this.data.additional_attributes?.translated_content
+        ? this.data.additional_attributes.translated_content
+        : this.data.content;
+
       return (
         this.formatMessage(
-          this.data.content,
+          contentToDisplay,
           this.isATweet,
           this.data.private
         ) + botMessageContent
