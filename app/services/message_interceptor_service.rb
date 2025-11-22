@@ -106,6 +106,14 @@ class MessageInterceptorService
     # This happens even if content unchanged (e.g., emoji-only messages)
     dispatch_create_events_with_translated_content
 
+    # AUTOMATIC MODE: Generate AI response if enabled
+    # This happens AFTER translation and broadcast, so:
+    # 1. User's message appears in agent dashboard (translated)
+    # 2. AI generates response based on conversation context
+    # 3. AI response posted as outgoing message from agent
+    # 4. AI response goes through translation for widget user
+    trigger_automatic_response if message.incoming?
+
     # Clear flag
     message.instance_variable_set(:@being_replaced, false)
 
@@ -189,5 +197,18 @@ class MessageInterceptorService
       message.conversation.update(waiting_since: nil)
     end
     message.conversation.update(waiting_since: message.created_at) if message.incoming? && message.conversation.waiting_since.blank?
+  end
+
+  def trigger_automatic_response
+    # Trigger automatic AI response if enabled for this conversation
+    # Runs asynchronously to avoid blocking translation callback
+    AutomaticResponseJob.perform_later(message.conversation_id) if automatic_mode_enabled?
+  rescue StandardError => e
+    Rails.logger.error("MessageInterceptor: Failed to trigger automatic response: #{e.message}")
+    # Don't raise - we don't want to break message flow if automatic response fails
+  end
+
+  def automatic_mode_enabled?
+    message.conversation.additional_attributes&.dig('automatic_mode') == true
   end
 end

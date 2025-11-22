@@ -116,6 +116,22 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     @conversation.save!
   end
 
+  def toggle_automatic_mode
+    # Toggle automatic AI response mode for this conversation
+    current_attrs = @conversation.additional_attributes || {}
+    enabled = params[:enabled]
+
+    @conversation.additional_attributes = current_attrs.merge(
+      automatic_mode: enabled
+    )
+    @conversation.save!
+
+    render json: {
+      success: true,
+      automatic_mode: enabled
+    }
+  end
+
   private
 
   def permitted_update_params
